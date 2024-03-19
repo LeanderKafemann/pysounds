@@ -1,1 +1,1 @@
-pycols is a package for displaying images via colorating whitespaces into the console
+pysounds is a package for playing various sounds in python without installing anything else
