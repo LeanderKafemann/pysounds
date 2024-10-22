@@ -1,48 +1,81 @@
-"""
-PYSOUNDS
-funcs:
-fanfare -- plays simple fanfare basing on frequency
-fanfare_note -- plays simple fanfare basing on note
-about -- returns information about your release
-main:
-starts fanfare with default values
-"""
+import base64
+import os
+
+import requests
+
+def upload_content_to_github(content: str, file_path: str, repo: str, token: str, branch: str, comment: str):
+    """
+    Uploads content to GitHub.
+    content -- content that is uploaded
+    file_path
+    """
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+    repo_api_url = f"https://api.github.com/repos/{repo}"
+    file_url = f"{repo_api_url}/contents/{file_path}"
+
+    encoded_content = base64.b64encode(content.encode()).decode("utf-8")
+
+    file_response = requests.get(file_url, headers=headers)
+    file_exists = file_response.status_code != 404
+    file_data = file_response.json() if file_exists else {}
+
+    update_data = {
+        "message": f"{comment}",
+        "content": encoded_content,
+        "branch": branch,
+    }
+
+    if "sha" in file_data:
+        update_data["sha"] = file_data["sha"]
+
+    response = requests.put(file_url, json=update_data, headers=headers)
+    response.raise_for_status()
+
+    print(f"Successfully uploaded content to {repo}/{branch}/{file_path}")
+
+
+def upload_file_to_github(file: str, repo: str, token: str, branch: str = "main", alias: str = "", comment: str = ""):
+    """
+    Uploads given file to GitHub repository repo.
+    Comments in branch branch and uses token token.
+    Provide an alias to upload to a different path then the file is saved.
+    Provide a comment to upload a comment different from "Update ...".
+    """
+    with open(file, "r") as f:
+        content = f.read()
+    
+    if alias == "":
+        alias = file
+    alias_ = os.path.normpath(alias).replace("\\", "/")
+
+    if comment == "":
+        comment = "Update "+str(alias_).split("/")[-1]
+
+    upload_content_to_github(content, alias, repo, token, branch, comment)
+
 def about():
     """
-    Returns information about your release and other projects by LK
+    Return information about your release.
     """
-    return {"Version":(1, 1, 0), "Author":"Leander Kafemann", "date":"13.08.2024", "recommend":("Büro by LK", "pyimager by LK", "naturalsize by LK"), "feedbackTo": "leander@kafemann.berlin"}
+    return {"version": "1.0.2", "author": "Leander Kafemann", "date": "22.10.2024", "feedbackTo": "leander@kafemann.berlin"}
 
-import winsound, time
+def main():
+    """
+    Calls main functions with given data.
+    """
+    file_path = input("Enter path (C:/Users/abc/def.ghi or ./def.ghi): ")
+    repo = input("Enter repository (Abc/def): ")
+    token = input("Enter token: ")
+    branch = input("Enter branch (main): ") or "main"
+    alias = input("Enter alias name (./def/ghi.jkl): ")
+    comment = input("Enter comment (Update ghi): ")
+    upload_file_to_github(file_path, repo, token, branch, alias, comment)
 
-starting = 261.63 #Hz
-n_dict = {"c": 1, "cis": 1.06, "d": 1.12, "dis": 1.19, "e": 1.26, "f": 1.33, "fis": 1.41, "g": 1.5, "gis": 1.59, "a": 1.68, "ais": 1.78, "h": 1.89} #note: hz at oct 1
-"""
-starting -- starting freq of c 1
-n_dict -- translating dictionary from note to multiplicator of starting
-"""
-
-def fanfare(freq: int = 1000):
-	"""
-	Starts classical da-da-da-dim fanfare with given freq..
-	'Distance' between notes is NOT evaluated individually,
-	but the most accurate starting at 1000 Hz.
-	"""
-	for i in range(3):
-		winsound.Beep(freq, 250)
-		time.sleep(0.05)
-	winsound.Beep(int(freq*1.35), 800)
-	
-def fanfare_note(start: str = "g", end: str = "c", oct_: int = 1):
-	"""
-	Starts classical da-da-da-dim fanfare in given octave
-	with given start (dadada) and end (dim) notes.
-	Requires you to give valid notes.
-	"""
-	for i in range(3):
-		winsound.Beep(int(n_dict[start]*oct_*starting), 250)
-		time.sleep(0.05)
-	winsound.Beep(int(n_dict[end]*oct_*starting), 800)
 
 if __name__ == "__main__":
-	fanfare()
+    main()
